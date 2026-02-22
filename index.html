@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flask Clock App — Entry</title>
+    <style>
+        body{font-family:Segoe UI,Arial,Helvetica,sans-serif;background:#f7f9fb;color:#222;margin:0;padding:0}
+        .container{max-width:720px;margin:6rem auto;padding:2rem;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(31,45,61,.08)}
+        h1{margin-top:0}
+        a.button{display:inline-block;margin:0.5rem 0;padding:0.6rem 1rem;background:#0366d6;color:#fff;text-decoration:none;border-radius:6px}
+        p.small{color:#555}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flask Clock App</h1>
+        <p class="small">This lightweight index links to the running Flask app. Start the app locally, then use the links below.</p>
+
+        <p>
+            <a class="button" href="http://localhost:5000/" target="_blank">Open Clock App</a>
+        </p>
+
+        <p>
+            <a class="button" href="http://localhost:5000/csv-analyzer" target="_blank">Open CSV Analyzer</a>
+        </p>
+
+        <h3>Quick start (Windows PowerShell)</h3>
+        <pre style="background:#f1f5f9;padding:0.75rem;border-radius:6px">cd "Sample Web App/flask-clock-app"
+venv\Scripts\Activate.ps1
+python src\app.py</pre>
+
+        <p class="small">If you prefer `flask run`, set `FLASK_APP=src.app` and run `flask run` from the same folder.</p>
+    </div>
+</body>
+</html>
