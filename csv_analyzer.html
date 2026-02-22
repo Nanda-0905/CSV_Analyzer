@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Data Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation bar -->
+    <div class="navbar">
+        <a href="{{ url_for('home') }}">Clock App</a>
+        <a href="{{ url_for('csv_analyzer') }}">CSV Analyzer</a>
+    </div>
+
+    <div class="container">
+        <!-- Header card -->
+        <div class="card">
+            <h1>📊 CSV Data Analyzer</h1>
+            <p>Upload a CSV file to generate a comprehensive statistical summary of your data.</p>
+        </div>
+
+        <!-- Upload card -->
+        <div class="card">
+            <h2>Upload CSV File</h2>
+            
+            <!-- Error message display -->
+            <div id="error-msg" class="error"></div>
+            
+            <!-- Success message display -->
+            <div id="success-msg" class="success"></div>
+            
+            <!-- Upload area -->
+            <div class="upload-area" id="upload-area">
+                <p><strong>Click to browse or drag and drop your CSV file</strong></p>
+                <p style="font-size: 0.9rem; color: #999;">Max file size: 16MB</p>
+                <input type="file" id="file-input" class="file-input" accept=".csv" />
+            </div>
+            
+            <!-- Action buttons -->
+            <div style="margin-top: 1rem;">
+                <button id="upload-btn" class="btn" disabled>Upload & Analyze</button>
+                <button id="clear-btn" class="btn btn-secondary">Clear</button>
+            </div>
+            
+            <!-- Loading spinner -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processing your CSV file...</p>
+            </div>
+        </div>
+
+        <!-- Statistics card -->
+        <div id="stats-card" class="card" style="display: none;">
+            <!-- Overall summary -->
+            <div class="stats-summary" id="stats-summary">
+                <h2>📈 Summary Statistics</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <h3>Total Rows</h3>
+                        <div class="value" id="stat-rows">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Total Columns</h3>
+                        <div class="value" id="stat-cols">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <h3>File Loaded</h3>
+                        <div class="value" id="stat-file">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detailed column statistics -->
+            <div class="column-stats" id="column-stats">
+                <h2>📋 Column Statistics</h2>
+                <table class="column-table" id="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Column Name</th>
+                            <th>Data Type</th>
+                            <th>Non-Null</th>
+                            <th>Null</th>
+                            <th>Unique</th>
+                            <th>Statistics</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const loading = document.getElementById('loading');
+        const errorMsg = document.getElementById('error-msg');
+        const successMsg = document.getElementById('success-msg');
+        const statsCard = document.getElementById('stats-card');
+        const statsSummary = document.getElementById('stats-summary');
+        const columnStats = document.getElementById('column-stats');
+
+        // File selection via click
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File selection via drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e9ecef';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '#f8f9fa';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        // Handle file selection
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect() {
+            if (fileInput.files.length > 0) {
+                uploadBtn.disabled = false;
+                uploadArea.textContent = `✓ Selected: ${fileInput.files[0].name}`;
+            }
+        }
+
+        // Handle upload button click
+        uploadBtn.addEventListener('click', uploadFile);
+
+        // Handle clear button click
+        clearBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            uploadBtn.disabled = true;
+            uploadArea.innerHTML = '<p><strong>Click to browse or drag and drop your CSV file</strong></p><p style="font-size: 0.9rem; color: #999;">Max file size: 16MB</p>';
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            statsCard.style.display = 'none';
+            loading.style.display = 'none';
+        });
+
+        /**
+         * Upload and analyze CSV file
+         */
+        async function uploadFile() {
+            if (fileInput.files.length === 0) {
+                showError('Please select a file first.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // Show loading spinner, hide messages
+            loading.style.display = 'block';
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            statsCard.style.display = 'none';
+
+            try {
+                const response = await fetch('{{ url_for("upload_csv") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (data.success) {
+                    displayStatistics(data.stats, fileInput.files[0].name);
+                    showSuccess('CSV file analyzed successfully!');
+                } else {
+                    showError(data.error || 'An error occurred while processing the CSV file.');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError(`Network error: ${error.message}`);
+            }
+        }
+
+        /**
+         * Display statistics in the UI
+         */
+        function displayStatistics(stats, filename) {
+            // Update summary statistics
+            document.getElementById('stat-rows').textContent = stats.total_rows.toLocaleString();
+            document.getElementById('stat-cols').textContent = stats.total_columns;
+            document.getElementById('stat-file').textContent = filename;
+
+            // Clear previous table rows
+            const tbody = document.getElementById('stats-tbody');
+            tbody.innerHTML = '';
+
+            // Populate column statistics table
+            for (const [colName, colStats] of Object.entries(stats.column_statistics)) {
+                const row = document.createElement('tr');
+                
+                // Column name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = colName;
+                row.appendChild(nameCell);
+
+                // Data type
+                const typeCell = document.createElement('td');
+                const typeSpan = document.createElement('span');
+                const isNumeric = colStats.dtype.includes('int') || colStats.dtype.includes('float');
+                typeSpan.className = `stat-badge ${isNumeric ? 'numeric' : 'string'}`;
+                typeSpan.textContent = colStats.dtype;
+                typeCell.appendChild(typeSpan);
+                row.appendChild(typeCell);
+
+                // Non-null count
+                const nonNullCell = document.createElement('td');
+                nonNullCell.textContent = `${colStats.non_null_count}`;
+                row.appendChild(nonNullCell);
+
+                // Null count
+                const nullCell = document.createElement('td');
+                nullCell.innerHTML = `${colStats.null_count}<br><small style="color: #999;">${colStats.null_percentage}%</small>`;
+                row.appendChild(nullCell);
+
+                // Unique values
+                const uniqueCell = document.createElement('td');
+                uniqueCell.textContent = colStats.unique_values;
+                row.appendChild(uniqueCell);
+
+                // Statistics details
+                const statsCell = document.createElement('td');
+                const statsDiv = document.createElement('div');
+                
+                if (isNumeric) {
+                    // Numeric statistics
+                    statsDiv.innerHTML = `
+                        <small><strong>Min:</strong> ${colStats.min.toLocaleString()}<br>
+                        <strong>Max:</strong> ${colStats.max.toLocaleString()}<br>
+                        <strong>Mean:</strong> ${colStats.mean.toLocaleString()}<br>
+                        <strong>Median:</strong> ${colStats.median.toLocaleString()}<br>
+                        <strong>Std Dev:</strong> ${colStats.std_dev}</small>
+                    `;
+                } else {
+                    // String statistics
+                    statsDiv.innerHTML = `
+                        <small><strong>Top:</strong> "${colStats.top_value}"<br>
+                        <strong>Frequency:</strong> ${colStats.top_value_frequency}</small>
+                    `;
+                }
+                
+                statsCell.appendChild(statsDiv);
+                row.appendChild(statsCell);
+
+                tbody.appendChild(row);
+            }
+
+            // Show statistics card
+            statsCard.style.display = 'block';
+        }
+
+        /**
+         * Show error message
+         */
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+        }
+
+        /**
+         * Show success message
+         */
+        function showSuccess(message) {
+            successMsg.textContent = message;
+            successMsg.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
