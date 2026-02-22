@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clock App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation bar -->
+    <div class="navbar">
+        <a href="{{ url_for('home') }}">Clock App</a>
+        <a href="{{ url_for('csv_analyzer') }}">CSV Analyzer</a>
+    </div>
+    
+    <div class="clock" id="clock"></div>
+    <script src="{{ url_for('static', filename='js/clock.js') }}"></script>
+</body>
+</html>
